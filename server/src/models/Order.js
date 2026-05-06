@@ -7,6 +7,11 @@ Order.init(
   {
     id: { type: DataTypes.INTEGER.UNSIGNED, autoIncrement: true, primaryKey: true },
     userId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false, field: "user_id" },
+    customerName: { type: DataTypes.STRING(255), allowNull: true, field: "customer_name" },
+    phone: { type: DataTypes.STRING(20), allowNull: true },
+    address: { type: DataTypes.TEXT, allowNull: true },
+    note: { type: DataTypes.TEXT, allowNull: true },
+    paymentMethod: { type: DataTypes.STRING(50), allowNull: false, defaultValue: "CASH", field: "payment_method" },
     totalPrice: { type: DataTypes.DECIMAL(10, 2), allowNull: false, field: "total_price" },
     status: { type: DataTypes.STRING(50), allowNull: false, defaultValue: "PENDING" },
     createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW, field: "created_at" },

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Order } from '../types'
 import { getToken } from '../utils/auth'
 import { formatCurrency, formatDateTime } from '../utils/format'
+import { CreateOrderModal, OrderDetailModal } from '../components'
 
 interface Notification {
   id: string
@@ -16,7 +17,10 @@ const AdminOrders: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [posToast, setPosToast] = useState<string | null>(null)
   
   const viewedOrdersRef = useRef<Set<number>>(new Set())
   const initialLoadRef = useRef(true)
@@ -81,8 +85,9 @@ const AdminOrders: React.FC = () => {
       }
 
       setOrders(data)
-    } catch (err: any) {
-      if (!isSilent) setError(err.message)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể tải danh sách đơn hàng'
+      if (!isSilent) setError(msg)
     } finally {
       if (!isSilent) setLoading(false)
     }
@@ -119,8 +124,9 @@ const AdminOrders: React.FC = () => {
       // Remove from UI instantly
       setOrders(prev => prev.filter(o => o.id !== orderId))
       alert('Đã xóa đơn hàng thành công!')
-    } catch (err: any) {
-      alert(err.message)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Xóa đơn hàng thất bại'
+      alert(msg)
     } finally {
       setDeletingId(null)
     }
@@ -128,6 +134,14 @@ const AdminOrders: React.FC = () => {
 
   const removeNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id))
+  }
+
+  const handleOpenOrderDetail = (order: Order) => {
+    setSelectedOrder(order)
+  }
+
+  const handleCloseOrderDetail = () => {
+    setSelectedOrder(null)
   }
 
   useEffect(() => {
@@ -138,6 +152,12 @@ const AdminOrders: React.FC = () => {
       return () => clearTimeout(timer)
     }
   }, [notifications])
+
+  useEffect(() => {
+    if (!posToast) return
+    const timer = setTimeout(() => setPosToast(null), 3500)
+    return () => clearTimeout(timer)
+  }, [posToast])
 
   const handleExportInvoice = (order: Order) => {
     const printWindow = window.open('', '_blank')
@@ -228,7 +248,13 @@ const AdminOrders: React.FC = () => {
   return (
     <div className="admin-orders-page">
       <div className="admin-container">
-        <h1 className="admin-title">Quản lý Đơn hàng</h1>
+        <div className="admin-orders-header">
+          <h1 className="admin-title">Quản lý Đơn hàng</h1>
+          <button className="pos-add-order-btn" onClick={() => setShowCreateModal(true)}>
+            <span className="pos-add-order-icon">＋</span>
+            <span>Thêm đơn hàng</span>
+          </button>
+        </div>
         
         <div className="notifications-container">
           {notifications.map((n) => (
@@ -246,6 +272,22 @@ const AdminOrders: React.FC = () => {
               <div className="progress-bar"></div>
             </div>
           ))}
+          {posToast && (
+            <div className="notification-toast pos-success-toast">
+              <div className="notification-content">
+                <div className="notification-header">
+                  <strong>Thành công</strong>
+                  <button className="close-notif" onClick={() => setPosToast(null)}>
+                    ✕
+                  </button>
+                </div>
+                <div className="notification-body">
+                  <p>{posToast}</p>
+                </div>
+              </div>
+              <div className="progress-bar"></div>
+            </div>
+          )}
         </div>
 
         <div className="orders-list">
@@ -258,7 +300,6 @@ const AdminOrders: React.FC = () => {
                   <tr>
                     <th>ID</th>
                     <th>Khách hàng</th>
-                    <th>Sản phẩm</th>
                     <th>Tổng tiền</th>
                     <th>Ngày đặt</th>
                     <th>Thao tác</th>
@@ -270,17 +311,10 @@ const AdminOrders: React.FC = () => {
                       <td>#{order.id}</td>
                       <td>
                         <div className="customer-cell">
-                          <span className="customer-name">{order.User?.username}</span>
-                          <span className="customer-email">{order.User?.email}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="items-cell">
-                          {order.items.map((item, idx) => (
-                            <div key={idx} className="item-row">
-                              {item.Product?.name} x {item.quantity}
-                            </div>
-                          ))}
+                          <span className="customer-name">{order.customerName || order.User?.username || 'Khách vãng lai'}</span>
+                          {order.User?.email && (
+                            <span className="customer-email">{order.User.email}</span>
+                          )}
                         </div>
                       </td>
                       <td className="total-cell">{formatCurrency(order.totalPrice)}</td>
@@ -288,10 +322,10 @@ const AdminOrders: React.FC = () => {
                       <td>
                         <div className="action-buttons">
                           <button 
-                            onClick={() => handleExportInvoice(order)}
+                            onClick={() => handleOpenOrderDetail(order)}
                             className="export-btn"
                           >
-                            Xuất hóa đơn
+                            Chi tiết đơn hàng
                           </button>
                           <button 
                             onClick={() => handleDeleteOrder(order.id)}
@@ -310,216 +344,22 @@ const AdminOrders: React.FC = () => {
           )}
         </div>
       </div>
-
-      <style>{`
-        .admin-orders-page {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 2rem 20px;
-          min-height: 80vh;
-        }
-
-        .admin-title {
-          margin-bottom: 2rem;
-          color: #333;
-          font-size: 2rem;
-        }
-
-        .admin-table-container {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          overflow: hidden;
-        }
-
-        .admin-table {
-          width: 100%;
-          border-collapse: collapse;
-          text-align: left;
-        }
-
-        .admin-table th {
-          background: #f8f9fa;
-          padding: 1.2rem 1rem;
-          font-weight: 600;
-          color: #555;
-          border-bottom: 2px solid #eee;
-        }
-
-        .admin-table td {
-          padding: 1.2rem 1rem;
-          border-bottom: 1px solid #eee;
-          vertical-align: top;
-        }
-
-        .customer-cell {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .customer-name {
-          font-weight: 600;
-          color: #333;
-        }
-
-        .customer-email {
-          font-size: 0.85rem;
-          color: #666;
-        }
-
-        .items-cell {
-          font-size: 0.9rem;
-          color: #555;
-        }
-
-        .item-row {
-          margin-bottom: 0.2rem;
-        }
-
-        .total-cell {
-          font-weight: 700;
-          color: var(--primary-color);
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 0.5rem;
-          flex-wrap: wrap;
-        }
-
-        .export-btn {
-          background: var(--primary-gradient);
-          color: white;
-          border: none;
-          padding: 0.6rem 1rem;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: 500;
-          transition: var(--transition-speed);
-          white-space: nowrap;
-        }
-
-        .export-btn:hover {
-          filter: var(--hover-filter);
-          transform: translateY(-2px);
-          box-shadow: var(--primary-shadow);
-        }
-
-        .delete-order-btn {
-          background: #ff4757;
-          color: white;
-          border: none;
-          padding: 0.6rem 1rem;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 0.9rem;
-          font-weight: 500;
-          transition: var(--transition-speed);
-        }
-
-        .delete-order-btn:hover:not(:disabled) {
-          background: #d62828;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(214, 40, 40, 0.2);
-        }
-
-        .delete-order-btn:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        /* Notifications */
-        .notifications-container {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          z-index: 9999;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          pointer-events: none;
-        }
-
-        .notification-toast {
-          pointer-events: auto;
-          background: white;
-          width: 280px;
-          border-radius: 12px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-          overflow: hidden;
-          animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-          border-left: 5px solid var(--primary-color);
-        }
-
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-
-        .notification-content {
-          padding: 15px;
-        }
-
-        .notification-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-          color: var(--primary-color);
-        }
-
-        .close-notif {
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 1rem;
-          color: #999;
-        }
-
-        .notification-body p {
-          margin: 0;
-          font-size: 0.9rem;
-          color: #555;
-          line-height: 1.4;
-        }
-
-        .progress-bar {
-          height: 4px;
-          background: var(--primary-gradient);
-          width: 100%;
-          animation: progress 4s linear forwards;
-        }
-
-        @keyframes progress {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-
-        .loading, .error-message, .no-orders {
-          text-align: center;
-          padding: 4rem;
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-          font-size: 1.2rem;
-          color: #666;
-        }
-
-        .error-message {
-          color: #d62828;
-        }
-
-        @media (max-width: 968px) {
-          .admin-table-container {
-            overflow-x: auto;
-          }
-          
-          .admin-table {
-            min-width: 800px;
-          }
-        }
-      `}</style>
+      {selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder}
+          onClose={handleCloseOrderDetail}
+          onExportInvoice={handleExportInvoice}
+        />
+      )}
+      {showCreateModal && (
+        <CreateOrderModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={() => {
+            setPosToast('Tạo đơn hàng thành công')
+            fetchOrders()
+          }}
+        />
+      )}
     </div>
   )
 }

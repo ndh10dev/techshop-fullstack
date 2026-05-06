@@ -79,12 +79,18 @@ export interface OrderItem {
   price: number
   Product?: {
     name: string
+    image?: string
   }
 }
 
 export interface Order {
   id: number
   userId: number
+  customerName?: string
+  phone?: string
+  address?: string
+  note?: string
+  paymentMethod?: string
   totalPrice: number
   status: string
   createdAt: string

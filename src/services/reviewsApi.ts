@@ -15,7 +15,9 @@ export async function fetchReviews(): Promise<ReviewDto[]> {
     try {
       const data = (await res.json()) as { message?: string }
       if (data?.message) message = data.message
-    } catch {}
+    } catch (e) {
+      void e
+    }
     throw new Error(message)
   }
 
@@ -41,7 +43,9 @@ export async function submitReview(payload: {
     try {
       const data = (await res.json()) as { message?: string }
       if (data?.message) message = data.message
-    } catch {}
+    } catch (e) {
+      void e
+    }
     throw new Error(message)
   }
 

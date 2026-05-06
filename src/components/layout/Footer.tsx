@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { COMPANY_NAME, CONTACT_INFO } from '../constants'
+import { COMPANY_NAME, CONTACT_INFO } from '../../constants'
 
 const Footer: React.FC = () => {
   return (
@@ -8,7 +8,10 @@ const Footer: React.FC = () => {
       <div className="footer-content">
         <div className="footer-section">
           <h3>Giới thiệu về {COMPANY_NAME}</h3>
-          <p>Chuỗi cửa hàng tiện lợi cung cấp đầy đủ đồ ăn nhanh, đồ uống và nhu yếu phẩm thiết yếu cho cuộc sống hằng ngày, phục vụ nhanh chóng và tiện lợi 24/7.</p>
+          <p>
+            Chuỗi cửa hàng tiện lợi cung cấp đầy đủ đồ ăn nhanh, đồ uống và nhu yếu phẩm thiết yếu cho cuộc sống hằng
+            ngày, phục vụ nhanh chóng và tiện lợi 24/7.
+          </p>
         </div>
         <div className="footer-section">
           <h3>Liên kết nhanh</h3>
@@ -40,3 +43,4 @@ const Footer: React.FC = () => {
 }
 
 export default Footer
+

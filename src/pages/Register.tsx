@@ -76,7 +76,7 @@ const Register: React.FC = () => {
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData])
+  }, [formData, navigate])
 
   return (
     <div className="auth-page">

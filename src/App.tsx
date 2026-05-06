@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import Header from './components/Header'
-import Footer from './components/Footer'
+import { Footer, Header, ScrollToTop } from './components'
 import Home from './pages/Home'
 import Products from './pages/Products'
 import Blog from './pages/Blog'
@@ -13,7 +12,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Account from './pages/Account'
 import AdminOrders from './pages/AdminOrders'
-import ScrollToTop from './components/ScrollToTop'
+import ChatWidget from './pages/ChatWidget'
 import type { CartItem, CheckoutFormData } from './types'
 import { getCartFromStorage, saveCartToStorage } from './utils/localStorage'
 import { getToken } from './utils/auth'
@@ -81,7 +80,10 @@ const App: React.FC = () => {
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
-        items: cartItems.map((i) => ({ productId: i.id, quantity: i.quantity }))
+        items: cartItems.map((i) => ({ productId: i.id, quantity: i.quantity })),
+        phone: formData.phone,
+        address: formData.shippingAddress,
+        note: formData.notes
       })
     })
 
@@ -138,6 +140,7 @@ const App: React.FC = () => {
         </Routes>
       </main>
       <Footer />
+      <ChatWidget />
     </div>
   )
 }

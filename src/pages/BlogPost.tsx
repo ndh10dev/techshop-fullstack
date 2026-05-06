@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
 import type { BlogPost as BlogPostType } from '../types'
 
@@ -7,14 +7,15 @@ const BlogPost: React.FC = () => {
   const [post, setPost] = useState<BlogPostType | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  
-  if (!id) {
-    return <Navigate to="/blog" replace />
-  }
 
-  const postId = parseInt(id, 10)
+  const postId = useMemo(() => {
+    if (!id) return null
+    const n = Number.parseInt(id, 10)
+    return Number.isFinite(n) ? n : null
+  }, [id])
 
   const load = useCallback(async () => {
+    if (postId == null) return
     setIsLoading(true)
     setError('')
     try {
@@ -42,6 +43,10 @@ const BlogPost: React.FC = () => {
   useEffect(() => {
     void load()
   }, [load])
+
+  if (!id || postId == null) {
+    return <Navigate to="/blog" replace />
+  }
 
   if (error) {
     return (

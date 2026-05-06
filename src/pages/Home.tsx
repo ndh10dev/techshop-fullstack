@@ -38,6 +38,18 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
     return () => clearInterval(timer)
   }, [slides.length])
 
+  const handlePrevSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)
+  }, [slides.length])
+
+  const handleNextSlide = useCallback(() => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length)
+  }, [slides.length])
+
+  const handleDotClick = useCallback((index: number) => {
+    setCurrentSlide(index)
+  }, [])
+
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoading(true)
@@ -130,15 +142,46 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
           <div
             key={index}
             className={`hero-slide ${index === currentSlide ? 'active' : ''}`}
-            style={{ backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${slide})` }}
+            style={{ backgroundImage: `url(${slide})` }}
           />
         ))}
+
+        <button
+          type="button"
+          className="hero-nav hero-nav--prev"
+          aria-label="Banner trước"
+          onClick={handlePrevSlide}
+        >
+          ⬅
+        </button>
+
+        <button
+          type="button"
+          className="hero-nav hero-nav--next"
+          aria-label="Banner tiếp theo"
+          onClick={handleNextSlide}
+        >
+          ➡
+        </button>
+
         <div className="hero-content">
-          <h1 className="animate-fade-up">Chào mừng đến với HioMart</h1>
-          <p className="animate-fade-up delay-1">Mua sắm tiện lợi mỗi ngày – đa dạng sản phẩm từ đồ ăn, thức uống đến nhu yếu phẩm.</p>
+          <h1 className="animate-fade-up">Thế giới tiện lợi ngay gần bạn</h1>
+          <p className="animate-fade-up delay-1">HioMart mang đến trải nghiệm mua sắm nhanh chóng, hiện đại với đầy đủ đồ ăn, thức uống và nhu yếu phẩm mỗi ngày.</p>
           <button className="cta-button animate-fade-up delay-2" onClick={handleShopNow}>
             Mua sắm ngay
           </button>
+        </div>
+
+        <div className="hero-dots" aria-label="Điều hướng banner">
+          {slides.map((_, index) => (
+            <button
+              key={index}
+              type="button"
+              className={`hero-dot ${index === currentSlide ? 'active' : ''}`}
+              aria-label={`Chuyển tới banner ${index + 1}`}
+              onClick={() => handleDotClick(index)}
+            />
+          ))}
         </div>
       </section>
 

@@ -1,0 +1,133 @@
+:root {
+  --primary-gradient: linear-gradient(135deg, #d62828 0%, #f77f00 100%);
+  --primary-color: #d62828;
+  --secondary-color: #f77f00;
+  --hover-filter: brightness(0.9);
+  --border-radius-btn: 10px;
+  --transition-speed: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.22s ease;
+  --primary-shadow: 0 4px 12px rgba(214, 40, 40, 0.15);
+  --premium-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --chat-gradient: linear-gradient(135deg, #d62828 0%, #f77f00 100%);
+  --chat-glow: 0 14px 30px rgba(214, 40, 40, 0.35);
+  --text-main: #333;
+  --text-muted: #666;
+  --surface-white: #fff;
+  --surface-bg: #f8f9fa;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: var(--surface-bg);
+  color: var(--text-main);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Shared app structure */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+/* Reusable utility */
+.animate-fade-up {
+  animation: fadeUp 0.8s ease forwards;
+}
+
+.delay-1 {
+  animation-delay: 0.2s;
+}
+
+.delay-2 {
+  animation-delay: 0.4s;
+}
+
+/* Base button */
+button {
+  font: inherit;
+}
+
+/* Shared animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 4px 15px rgba(214, 40, 40, 0.4);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 4px 25px rgba(214, 40, 40, 0.7);
+  }
+}
+
+@keyframes chat-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dot-pulse {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.65);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Scrollbar */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #f1f3f5;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #f77f00, #d62828);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  filter: brightness(0.95);
+}

@@ -6,7 +6,7 @@ import { User } from "../models/User.js";
 import { HttpError } from "../utils/httpError.js";
 
 export async function createOrder(req, res, next) {
-  const { items } = req.body;
+  const { items, phone, address, note } = req.body;
 
   try {
     const result = await sequelize.transaction(async (t) => {
@@ -35,7 +35,86 @@ export async function createOrder(req, res, next) {
       }
 
       const order = await Order.create(
-        { userId: req.user.id, totalPrice: total, status: "PENDING" },
+        {
+          userId: req.user.id,
+          phone,
+          address,
+          note: note || null,
+          paymentMethod: "CASH",
+          totalPrice: total,
+          status: "PENDING",
+        },
+        { transaction: t }
+      );
+
+      for (const item of items) {
+        const product = byId.get(item.productId);
+        await OrderItem.create(
+          {
+            orderId: order.id,
+            productId: product.id,
+            quantity: item.quantity,
+            price: product.price,
+          },
+          { transaction: t }
+        );
+
+        await product.update({ quantity: product.quantity - item.quantity }, { transaction: t });
+      }
+
+      const created = await Order.findByPk(order.id, {
+        include: [{ model: OrderItem, as: "items" }],
+        transaction: t,
+      });
+
+      return created;
+    });
+
+    res.status(201).json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createPosOrder(req, res, next) {
+  const { items, customerName, phone, address, note, paymentMethod } = req.body;
+
+  try {
+    const result = await sequelize.transaction(async (t) => {
+      const productIds = [...new Set(items.map((i) => i.productId))];
+      const products = await Product.findAll({
+        where: { id: productIds },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (products.length !== productIds.length) {
+        throw new HttpError(400, "One or more products not found");
+      }
+
+      const byId = new Map(products.map((p) => [p.id, p]));
+
+      let total = 0;
+      for (const item of items) {
+        const product = byId.get(item.productId);
+        if (!product) throw new HttpError(400, "One or more products not found");
+        if (product.quantity < item.quantity) {
+          throw new HttpError(400, `Insufficient quantity for product ${product.id}`);
+        }
+        total += Number(product.price) * item.quantity;
+      }
+
+      const order = await Order.create(
+        {
+          userId: req.user.id,
+          customerName: customerName || null,
+          phone,
+          address: address || null,
+          note: note || null,
+          paymentMethod: paymentMethod || "CASH",
+          totalPrice: total,
+          status: "PENDING",
+        },
         { transaction: t }
       );
 
@@ -114,7 +193,7 @@ export async function listOrdersAdmin(req, res, next) {
           include: [
             {
               model: Product,
-              attributes: ["name"],
+              attributes: ["name", "image"],
             },
           ],
         },
