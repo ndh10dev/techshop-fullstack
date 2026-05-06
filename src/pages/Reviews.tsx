@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import type { Review } from '../types'
-import { renderStars } from '../utils/format'
+import { renderStars, formatDateTime } from '../utils/format'
 import { fetchReviews, submitReview } from '../services/reviewsApi'
 import { getToken } from '../utils/auth'
 
@@ -109,7 +109,7 @@ const Reviews: React.FC = () => {
                 <div className="review-header">
                   <div className="review-author">
                     <h3>{review.customerName}</h3>
-                    <span className="review-date">{review.createdAt}</span>
+                    <span className="review-date">{formatDateTime(review.createdAt)}</span>
                   </div>
                   <div className="review-rating">
                     {renderStars(review.rating)}

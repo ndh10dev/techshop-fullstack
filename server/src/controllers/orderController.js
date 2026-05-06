@@ -81,6 +81,25 @@ export async function listMyOrders(req, res, next) {
   }
 }
 
+export async function deleteOrder(req, res, next) {
+  try {
+    const { id } = req.params;
+    const order = await Order.findByPk(id);
+
+    if (!order) {
+      throw new HttpError(404, "Order not found");
+    }
+
+    // Delete associated OrderItems first if not using CASCADE (Sequelize usually needs this if not defined)
+    await OrderItem.destroy({ where: { orderId: id } });
+    await order.destroy();
+
+    res.json({ message: "Order deleted successfully" });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function listOrdersAdmin(req, res, next) {
   try {
     const orders = await Order.findAll({

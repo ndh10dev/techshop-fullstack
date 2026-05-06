@@ -1,44 +1,150 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Order } from '../types'
 import { getToken } from '../utils/auth'
-import { formatCurrency } from '../utils/format'
+import { formatCurrency, formatDateTime } from '../utils/format'
+
+interface Notification {
+  id: string
+  orderId: number
+  customerName: string
+  totalPrice: number
+  timestamp: number
+}
 
 const AdminOrders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  
+  const viewedOrdersRef = useRef<Set<number>>(new Set())
+  const initialLoadRef = useRef(true)
 
+  // Load viewed orders from localStorage
   useEffect(() => {
-    const fetchOrders = async () => {
+    const saved = localStorage.getItem('viewed_order_ids')
+    if (saved) {
       try {
-        const token = getToken()
-        if (!token) {
-          setError('Vui lòng đăng nhập với quyền Admin')
-          setLoading(false)
-          return
-        }
-
-        const res = await fetch('http://localhost:5000/api/orders/admin', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-
-        if (!res.ok) {
-          throw new Error('Không thể tải danh sách đơn hàng')
-        }
-
-        const data = await res.json()
-        setOrders(data)
-      } catch (err: any) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
+        const ids = JSON.parse(saved)
+        viewedOrdersRef.current = new Set(ids)
+      } catch (e) {
+        console.error('Failed to parse viewed orders', e)
       }
     }
-
-    fetchOrders()
   }, [])
+
+  const fetchOrders = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true)
+    try {
+      const token = getToken()
+      if (!token) {
+        setError('Vui lòng đăng nhập với quyền Admin')
+        if (!isSilent) setLoading(false)
+        return
+      }
+
+      const res = await fetch('http://localhost:5000/api/orders/admin', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!res.ok) {
+        throw new Error('Không thể tải danh sách đơn hàng')
+      }
+
+      const data = await res.json() as Order[]
+      
+      // Check for new orders if not initial load
+      if (!initialLoadRef.current) {
+        const newOrders = data.filter(order => !viewedOrdersRef.current.has(order.id))
+        if (newOrders.length > 0) {
+          const newNotifications: Notification[] = newOrders.map(order => ({
+            id: Math.random().toString(36).substr(2, 9),
+            orderId: order.id,
+            customerName: order.User?.username || 'Khách vãng lai',
+            totalPrice: order.totalPrice,
+            timestamp: Date.now()
+          }))
+          setNotifications(prev => [...prev, ...newNotifications])
+          
+          // Auto-mark as viewed? No, user says "already viewed should NOT appear again"
+          // We'll mark them as viewed when the notification is closed or after it appears.
+          // Actually, let's mark them as viewed immediately so we don't notify again.
+          const updatedViewed = new Set(viewedOrdersRef.current)
+          newOrders.forEach(o => updatedViewed.add(o.id))
+          viewedOrdersRef.current = updatedViewed
+          localStorage.setItem('viewed_order_ids', JSON.stringify(Array.from(updatedViewed)))
+        }
+      } else {
+        // Initial load: mark all existing orders as viewed
+        const currentIds = new Set(data.map(o => o.id))
+        viewedOrdersRef.current = currentIds
+        localStorage.setItem('viewed_order_ids', JSON.stringify(Array.from(currentIds)))
+        initialLoadRef.current = false
+      }
+
+      setOrders(data)
+    } catch (err: any) {
+      if (!isSilent) setError(err.message)
+    } finally {
+      if (!isSilent) setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchOrders()
+    
+    // Polling every 10 seconds for new orders
+    const interval = setInterval(() => {
+      fetchOrders(true)
+    }, 10000)
+    
+    return () => clearInterval(interval)
+  }, [fetchOrders])
+
+  const handleDeleteOrder = async (orderId: number) => {
+    const ok = window.confirm('Bạn có chắc chắn muốn xóa đơn hàng này vĩnh viễn không?')
+    if (!ok) return
+
+    setDeletingId(orderId)
+    try {
+      const token = getToken()
+      const res = await fetch(`http://localhost:5000/api/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!res.ok) {
+        throw new Error('Xóa đơn hàng thất bại')
+      }
+
+      // Remove from UI instantly
+      setOrders(prev => prev.filter(o => o.id !== orderId))
+      alert('Đã xóa đơn hàng thành công!')
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id))
+  }
+
+  // Auto-dismiss notifications
+  useEffect(() => {
+    if (notifications.length > 0) {
+      const timer = setTimeout(() => {
+        removeNotification(notifications[0].id)
+      }, 4000)
+      return () => clearTimeout(timer)
+    }
+  }, [notifications])
 
   const handleExportInvoice = (order: Order) => {
     const printWindow = window.open('', '_blank')
@@ -70,7 +176,7 @@ const AdminOrders: React.FC = () => {
             <div class="logo">HioMart</div>
             <div class="invoice-info">
               <div><strong>Hóa đơn:</strong> #${order.id}</div>
-              <div><strong>Ngày:</strong> ${new Date(order.createdAt).toLocaleDateString('vi-VN')}</div>
+              <div><strong>Ngày:</strong> ${formatDateTime(order.createdAt)}</div>
             </div>
           </div>
 
@@ -131,6 +237,25 @@ const AdminOrders: React.FC = () => {
       <div className="admin-container">
         <h1 className="admin-title">Quản lý Đơn hàng</h1>
         
+        {/* Notifications Stack */}
+        <div className="notifications-container">
+          {notifications.map((n) => (
+            <div key={n.id} className="notification-toast">
+              <div className="notification-content">
+                <div className="notification-header">
+                  <strong>Đơn hàng mới!</strong>
+                  <button className="close-notif" onClick={() => removeNotification(n.id)}>✕</button>
+                </div>
+                <div className="notification-body">
+                  <p>Mới từ: {n.customerName}</p>
+                  <p>Tổng: {formatCurrency(n.totalPrice)}</p>
+                </div>
+              </div>
+              <div className="progress-bar"></div>
+            </div>
+          ))}
+        </div>
+
         <div className="orders-list">
           {orders.length === 0 ? (
             <div className="no-orders">Chưa có đơn hàng nào.</div>
@@ -167,14 +292,23 @@ const AdminOrders: React.FC = () => {
                         </div>
                       </td>
                       <td className="total-cell">{formatCurrency(order.totalPrice)}</td>
-                      <td>{new Date(order.createdAt).toLocaleDateString('vi-VN')}</td>
+                      <td>{formatDateTime(order.createdAt)}</td>
                       <td>
-                        <button 
-                          onClick={() => handleExportInvoice(order)}
-                          className="export-btn"
-                        >
-                          Xuất hóa đơn
-                        </button>
+                        <div className="action-buttons">
+                          <button 
+                            onClick={() => handleExportInvoice(order)}
+                            className="export-btn"
+                          >
+                            Xuất hóa đơn
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteOrder(order.id)}
+                            className="delete-order-btn"
+                            disabled={deletingId === order.id}
+                          >
+                            {deletingId === order.id ? 'Đang xóa...' : 'Xóa'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -255,6 +389,12 @@ const AdminOrders: React.FC = () => {
           color: var(--primary-color);
         }
 
+        .action-buttons {
+          display: flex;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+        }
+
         .export-btn {
           background: var(--primary-gradient);
           color: white;
@@ -272,6 +412,96 @@ const AdminOrders: React.FC = () => {
           filter: var(--hover-filter);
           transform: translateY(-2px);
           box-shadow: var(--primary-shadow);
+        }
+
+        .delete-order-btn {
+          background: #ff4757;
+          color: white;
+          border: none;
+          padding: 0.6rem 1rem;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          font-weight: 500;
+          transition: var(--transition-speed);
+        }
+
+        .delete-order-btn:hover:not(:disabled) {
+          background: #d62828;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(214, 40, 40, 0.2);
+        }
+
+        .delete-order-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* Notifications */
+        .notifications-container {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          pointer-events: none;
+        }
+
+        .notification-toast {
+          pointer-events: auto;
+          background: white;
+          width: 280px;
+          border-radius: 12px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+          overflow: hidden;
+          animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          border-left: 5px solid var(--primary-color);
+        }
+
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+
+        .notification-content {
+          padding: 15px;
+        }
+
+        .notification-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+          color: var(--primary-color);
+        }
+
+        .close-notif {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 1rem;
+          color: #999;
+        }
+
+        .notification-body p {
+          margin: 0;
+          font-size: 0.9rem;
+          color: #555;
+          line-height: 1.4;
+        }
+
+        .progress-bar {
+          height: 4px;
+          background: var(--primary-gradient);
+          width: 100%;
+          animation: progress 4s linear forwards;
+        }
+
+        @keyframes progress {
+          from { width: 100%; }
+          to { width: 0%; }
         }
 
         .loading, .error-message, .no-orders {

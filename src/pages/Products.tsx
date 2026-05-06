@@ -14,6 +14,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryParam = searchParams.get('category') || 'all'
   const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam)
+  const [searchQuery, setSearchQuery] = useState<string>('')
   const [items, setItems] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -68,13 +69,22 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
   }, [loadProducts])
 
   const filteredProducts = useMemo(() => {
-    const base = selectedCategory === 'all'
+    let base = selectedCategory === 'all'
       ? items
       : items.filter(product => product.category === selectedCategory)
 
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      base = base.filter(p => 
+        p.name.toLowerCase().includes(query) || 
+        (p.brand && p.brand.toLowerCase().includes(query)) ||
+        (p.description && p.description.toLowerCase().includes(query))
+      )
+    }
+
     if (role === 'ADMIN') return base
     return base.filter(p => (p.quantity ?? 0) > 0)
-  }, [items, role, selectedCategory])
+  }, [items, role, selectedCategory, searchQuery])
 
   const handleAddToCart = useCallback((product: Product) => {
     addToCart({
@@ -212,6 +222,23 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
           </button>
         </div>
       )}
+
+      {/* Search Bar */}
+      <div className="search-container">
+        <div className="search-wrapper">
+          <span className="search-icon">🔍</span>
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Tìm kiếm sản phẩm..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button className="search-clear" onClick={() => setSearchQuery('')}>✕</button>
+          )}
+        </div>
+      </div>
       
       {/* Category Menu Buttons */}
       <div className="category-menu">
@@ -249,13 +276,14 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
             <p>{error}</p>
           </div>
         )}
+
         {!error && isLoading ? (
           <div className="no-products">
             <p>Đang tải sản phẩm...</p>
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="no-products">
-            <p>Không có sản phẩm nào trong danh mục này.</p>
+            <p>Không tìm thấy sản phẩm nào khớp với tìm kiếm của bạn.</p>
           </div>
         ) : (
           filteredProducts.map((product) => (

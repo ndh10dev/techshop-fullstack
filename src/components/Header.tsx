@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useMemo, useCallback } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { categories } from '../constants'
 import type { CartItem } from '../types'
 import { getRoleFromStorage } from '../utils/auth'
@@ -11,8 +11,8 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ 
   cartItems
 }) => {
-  const [isProductsDropdownOpen, setIsProductsDropdownOpen] = useState(false)
   const role = getRoleFromStorage()
+  const location = useLocation()
 
   const totalItems = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
@@ -20,60 +20,66 @@ const Header: React.FC<HeaderProps> = ({
   )
 
   const handleDropdownClose = useCallback(() => {
-    setIsProductsDropdownOpen(false)
+    // Dropdown is now handled by CSS :hover
   }, [])
+
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/'
+    return location.pathname.startsWith(path)
+  }
 
   return (
     <header className="header">
       <nav className="nav-container">
         <Link to="/" className="logo">
+          <span className="logo-icon">🏪</span>
           HioMart
         </Link>
         <ul className="nav-links">
-          <li><Link to="/">Trang chủ</Link></li>
+          <li>
+            <Link to="/" className={isActive('/') ? 'active' : ''}>Trang chủ</Link>
+          </li>
           <li 
-            className="products-dropdown-container"
-            onMouseEnter={() => setIsProductsDropdownOpen(true)}
-            onMouseLeave={handleDropdownClose}
+            className={`products-dropdown-container ${isActive('/products') ? 'active' : ''}`}
           >
             <Link to="/products" className="products-dropdown-trigger">
               Sản phẩm ▾
             </Link>
-            {isProductsDropdownOpen && (
-              <div 
-                className="products-dropdown-menu"
-                onMouseEnter={() => setIsProductsDropdownOpen(true)}
-                onMouseLeave={handleDropdownClose}
+            <div className="products-dropdown-menu">
+              <Link 
+                to="/products"
+                className="dropdown-item"
+                onClick={handleDropdownClose}
               >
-                <Link 
-                  to="/products"
+                Tất cả sản phẩm
+              </Link>
+              {categories.map((category) => (
+                <Link
+                  key={category.id}
+                  to={`/products?category=${category.id}`}
                   className="dropdown-item"
                   onClick={handleDropdownClose}
                 >
-                  Tất cả sản phẩm
+                  {category.name}
                 </Link>
-                {categories.map((category) => (
-                  <Link
-                    key={category.id}
-                    to={`/products?category=${category.id}`}
-                    className="dropdown-item"
-                    onClick={handleDropdownClose}
-                  >
-                    {category.name}
-                  </Link>
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
           </li>
-          <li><Link to="/blog">Khám phá & Tin tức</Link></li>
-          <li><Link to="/reviews">Đánh giá</Link></li>
+          <li>
+            <Link to="/blog" className={isActive('/blog') ? 'active' : ''}>Tin tức</Link>
+          </li>
+          <li>
+            <Link to="/reviews" className={isActive('/reviews') ? 'active' : ''}>Đánh giá</Link>
+          </li>
           {role === 'ADMIN' && (
-            <li><Link to="/admin/orders">Quản lý Đơn hàng</Link></li>
+            <li>
+              <Link to="/admin/orders" className={isActive('/admin') ? 'active' : ''}>Quản lý</Link>
+            </li>
           )}
           <li>
-            <Link to="/account" className="nav-link-auth">Tài khoản</Link>
+            <Link to="/account" className={isActive('/account') ? 'active' : ''}>Tài khoản</Link>
           </li>
-          <li className="cart-icon">
+          <li className={`cart-icon ${isActive('/cart') ? 'active' : ''}`}>
             <Link to="/cart" className="cart-link">
               🛒  
               {totalItems > 0 && (

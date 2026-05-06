@@ -1,7 +1,7 @@
 import React, { useRef, useMemo, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { categories } from '../constants'
-import { formatCurrency, renderStars } from '../utils/format'
+import { formatCurrency, renderStars, formatDateTime } from '../utils/format'
 import type { Product, BlogPost } from '../types'
 import { getRoleFromStorage } from '../utils/auth'
 
@@ -21,6 +21,22 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
 
   const [error, setError] = useState('')
   const [postError, setPostError] = useState('')
+
+  // Slideshow state
+  const [currentSlide, setCurrentSlide] = useState(0)
+  const slides = [
+    'https://res.cloudinary.com/dicsf4zkz/image/upload/v1777646473/banner_h94yki.webp',
+    'https://res.cloudinary.com/dicsf4zkz/image/upload/v1778070130/banner_2_r7eppl.jpg',
+    'https://res.cloudinary.com/dicsf4zkz/image/upload/v1778070130/banner_4_mgfxh2.jpg',
+    'https://res.cloudinary.com/dicsf4zkz/image/upload/v1778070130/banner_3_g9rx6c.jpg'
+  ]
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [slides.length])
 
   // 🔥 LOAD PRODUCTS
   useEffect(() => {
@@ -115,11 +131,20 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
 
       {/* HERO */}
       <section className="hero">
-        <h1>Chào mừng đến với HioMart</h1>
-        <p>Mua sắm tiện lợi mỗi ngày – đa dạng sản phẩm từ đồ ăn, thức uống đến nhu yếu phẩm.</p>
-        <button className="cta-button" onClick={handleShopNow}>
-          Mua sắm ngay
-        </button>
+        {slides.map((slide, index) => (
+          <div
+            key={index}
+            className={`hero-slide ${index === currentSlide ? 'active' : ''}`}
+            style={{ backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${slide})` }}
+          />
+        ))}
+        <div className="hero-content">
+          <h1 className="animate-fade-up">Chào mừng đến với HioMart</h1>
+          <p className="animate-fade-up delay-1">Mua sắm tiện lợi mỗi ngày – đa dạng sản phẩm từ đồ ăn, thức uống đến nhu yếu phẩm.</p>
+          <button className="cta-button animate-fade-up delay-2" onClick={handleShopNow}>
+            Mua sắm ngay
+          </button>
+        </div>
       </section>
 
       {/* CATEGORY */}
@@ -219,7 +244,7 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
                   <p className="product-description">{post.excerpt}</p>
 
                   <p style={{ fontSize: 12, color: '#888' }}>
-                    {post.date} • {post.readTime}
+                    {formatDateTime(post.createdAt || post.date)} • {post.readTime}
                   </p>
 
                   <Link to={`/blog/${post.id}`} className="view-all-link">
