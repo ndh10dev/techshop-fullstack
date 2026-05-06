@@ -38,7 +38,6 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
     return () => clearInterval(timer)
   }, [slides.length])
 
-  // 🔥 LOAD PRODUCTS
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoading(true)
@@ -59,7 +58,6 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
     loadProducts()
   }, [])
 
-  // 🔥 LOAD POSTS
   useEffect(() => {
     const loadPosts = async () => {
       setLoadingPosts(true)
@@ -87,7 +85,6 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
     loadPosts()
   }, [])
 
-  // 🔥 FEATURED PRODUCTS
   const featuredProducts = useMemo(() => {
     const order = ['drink', 'food', 'snack', 'daily']
     const map = new Map<string, Product[]>()
@@ -128,8 +125,6 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
 
   return (
     <div>
-
-      {/* HERO */}
       <section className="hero">
         {slides.map((slide, index) => (
           <div
@@ -147,7 +142,6 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
         </div>
       </section>
 
-      {/* CATEGORY */}
       <section className="categories-section">
         <h2 className="section-title">Mua sắm theo danh mục</h2>
         <div className="category-grid">
@@ -162,7 +156,6 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
         </div>
       </section>
 
-      {/* PRODUCTS */}
       <section className="products-section" ref={productsSectionRef}>
         <div className="section-header">
           <h2 className="section-title">Sản phẩm nổi bật</h2>
@@ -187,7 +180,7 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
                   <h3 className="product-title">{product.name}</h3>
 
                   {product.brand && (
-                    <p className="product-brand">Brand: {product.brand}</p>
+                    <p className="product-brand">Thương hiệu: {product.brand}</p>
                   )}
 
                   <p className="product-description">{product.description}</p>
@@ -215,7 +208,6 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
         </div>
       </section>
 
-      {/* 🔥 BLOG SECTION FIX CHUẨN */}
       <section className="products-section">
         <div className="section-header">
           <h2 className="section-title">Tin tức & Bài viết</h2>

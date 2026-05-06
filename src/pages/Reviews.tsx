@@ -11,12 +11,11 @@ const Reviews: React.FC = () => {
     rating: 5,
     comment: ''
   })
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
   const token = getToken()
 
-  // 🔥 LOAD REVIEW NGAY KHI VÀO TRANG
   useEffect(() => {
     loadReviews()
   }, [])
@@ -25,7 +24,7 @@ const Reviews: React.FC = () => {
     setIsLoading(true)
     setError('')
     try {
-      const data = await fetchReviews() // ❌ KHÔNG CÒN productId
+      const data = await fetchReviews()
       setReviews(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Không thể tải đánh giá')

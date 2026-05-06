@@ -56,7 +56,6 @@ const AdminOrders: React.FC = () => {
 
       const data = await res.json() as Order[]
       
-      // Check for new orders if not initial load
       if (!initialLoadRef.current) {
         const newOrders = data.filter(order => !viewedOrdersRef.current.has(order.id))
         if (newOrders.length > 0) {
@@ -69,16 +68,12 @@ const AdminOrders: React.FC = () => {
           }))
           setNotifications(prev => [...prev, ...newNotifications])
           
-          // Auto-mark as viewed? No, user says "already viewed should NOT appear again"
-          // We'll mark them as viewed when the notification is closed or after it appears.
-          // Actually, let's mark them as viewed immediately so we don't notify again.
           const updatedViewed = new Set(viewedOrdersRef.current)
           newOrders.forEach(o => updatedViewed.add(o.id))
           viewedOrdersRef.current = updatedViewed
           localStorage.setItem('viewed_order_ids', JSON.stringify(Array.from(updatedViewed)))
         }
       } else {
-        // Initial load: mark all existing orders as viewed
         const currentIds = new Set(data.map(o => o.id))
         viewedOrdersRef.current = currentIds
         localStorage.setItem('viewed_order_ids', JSON.stringify(Array.from(currentIds)))
@@ -96,7 +91,6 @@ const AdminOrders: React.FC = () => {
   useEffect(() => {
     fetchOrders()
     
-    // Polling every 10 seconds for new orders
     const interval = setInterval(() => {
       fetchOrders(true)
     }, 10000)
@@ -136,7 +130,6 @@ const AdminOrders: React.FC = () => {
     setNotifications(prev => prev.filter(n => n.id !== id))
   }
 
-  // Auto-dismiss notifications
   useEffect(() => {
     if (notifications.length > 0) {
       const timer = setTimeout(() => {
@@ -237,7 +230,6 @@ const AdminOrders: React.FC = () => {
       <div className="admin-container">
         <h1 className="admin-title">Quản lý Đơn hàng</h1>
         
-        {/* Notifications Stack */}
         <div className="notifications-container">
           {notifications.map((n) => (
             <div key={n.id} className="notification-toast">

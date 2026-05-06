@@ -223,7 +223,6 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
         </div>
       )}
 
-      {/* Search Bar */}
       <div className="search-container">
         <div className="search-wrapper">
           <span className="search-icon">🔍</span>
@@ -240,7 +239,6 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
         </div>
       </div>
       
-      {/* Category Menu Buttons */}
       <div className="category-menu">
         <button 
           className={`category-menu-btn ${selectedCategory === 'all' ? 'active' : ''}`}
@@ -259,7 +257,6 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
         ))}
       </div>
 
-      {/* Products Count */}
       <div className="products-count">
         Hiển thị {filteredProducts.length} sản phẩm
         {selectedCategory !== 'all' && (
@@ -269,7 +266,6 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
         )}
       </div>
 
-      {/* Products Grid */}
       <div className="products-grid">
         {error && (
           <div className="no-products">
@@ -295,7 +291,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
               />
               <div className="product-info">
                 <h3 className="product-title">{product.name}</h3>
-                {product.brand && <p className="product-brand">Brand: {product.brand}</p>}
+                {product.brand && <p className="product-brand">Thương hiệu: {product.brand}</p>}
                 <p className="product-description">{product.description}</p>
                 <div className="product-rating">
                   {renderStars(product.rating)}
@@ -340,7 +336,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
             <form className="modal-form" onSubmit={handleModalSubmit}>
               <div className="modal-grid">
                 <div className="form-group">
-                  <label>Image (URL) *</label>
+                  <label>Ảnh (URL) *</label>
                   <input
                     className="form-control"
                     value={form.image}
@@ -350,7 +346,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Name *</label>
+                  <label>Tên sản phẩm *</label>
                   <input
                     className="form-control"
                     value={form.name}
@@ -360,7 +356,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Brand</label>
+                  <label>Thương hiệu</label>
                   <input
                     className="form-control"
                     value={form.brand}
@@ -369,7 +365,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Category *</label>
+                  <label>Danh mục *</label>
                   <select
                     className="form-control"
                     value={form.category}
@@ -384,7 +380,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
                 </div>
 
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>Description *</label>
+                  <label>Mô tả *</label>
                   <input
                     className="form-control"
                     value={form.description}
@@ -394,7 +390,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Rating (0-5)</label>
+                  <label>Đánh giá (0-5)</label>
                   <input
                     type="number"
                     min={0}
@@ -406,7 +402,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Price *</label>
+                  <label>Giá *</label>
                   <input
                     type="number"
                     min={0}
@@ -418,7 +414,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Quantity *</label>
+                  <label>Số lượng *</label>
                   <input
                     type="number"
                     min={0}

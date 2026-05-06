@@ -42,7 +42,7 @@ body {
   min-height: 100vh;
 }
 
-/* Account page additions (reuse auth layout) */
+/* Account page */
 .account-actions {
   display: grid;
   gap: 0.8rem;
@@ -1461,6 +1461,7 @@ textarea.form-control {
   font-size: 1.1rem;
 }
 
+/* Responsive Design */
 @media (max-width: 768px) {
   .header {
     padding: 0.6rem 0;
@@ -1482,7 +1483,7 @@ textarea.form-control {
   }
 
   .nav-links {
-    display: none; /* In a real app, we'd add a hamburger menu here */
+    display: none;
   }
 
   .cart-icon {
@@ -1863,7 +1864,7 @@ textarea.form-control {
   align-items: center;
   justify-content: center;
   padding: 2rem 20px;
-  background: #f8f9fa; /* Changed from blue gradient to match body */
+  background: #f8f9fa;
 }
 
 .auth-container {
