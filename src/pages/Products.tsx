@@ -4,9 +4,11 @@ import { categories } from '../constants'
 import { formatCurrency, renderStars } from '../utils/format'
 import type { Product } from '../types'
 import { getRoleFromStorage, getToken } from '../utils/auth'
+import { ProductDetailModal } from '../components'
+import { getProductStock } from '../utils/stock'
 
 interface ProductsProps {
-  addToCart: (product: { id: number; name: string; price: number; image: string }) => void
+  addToCart: (product: { id: number; name: string; price: number; image: string; stockQuantity: number }) => Promise<void>
 }
 
 const Products: React.FC<ProductsProps> = ({ addToCart }) => {
@@ -19,6 +21,9 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Product detail modal (user + admin)
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null)
+
   // Admin product modal
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editing, setEditing] = useState<Product | null>(null)
@@ -29,7 +34,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
     description: '',
     rating: 0,
     price: 0,
-    quantity: 0,
+    stockQuantity: 0,
     category: 'drink'
   })
 
@@ -83,18 +88,29 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
     }
 
     if (role === 'ADMIN') return base
-    return base.filter(p => (p.quantity ?? 0) > 0)
+    return base.filter((p) => getProductStock(p) > 0)
   }, [items, role, selectedCategory, searchQuery])
 
   const handleAddToCart = useCallback((product: Product) => {
-    addToCart({
+    void addToCart({
       id: product.id,
       name: product.name,
       price: product.price,
-      image: product.image
+      image: product.image,
+      stockQuantity: getProductStock(product)
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Không thể thêm vào giỏ hàng'
+      alert(message)
     })
-    alert(`Đã thêm ${product.name} vào giỏ hàng!`)
   }, [addToCart])
+
+  const openDetail = useCallback((product: Product) => {
+    setDetailProduct(product)
+  }, [])
+
+  const closeDetail = useCallback(() => {
+    setDetailProduct(null)
+  }, [])
 
   const openCreate = useCallback(() => {
     setEditing(null)
@@ -105,7 +121,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
       description: '',
       rating: 0,
       price: 0,
-      quantity: 0,
+      stockQuantity: 0,
       category: selectedCategory === 'all' ? 'drink' : selectedCategory
     })
     setIsModalOpen(true)
@@ -120,7 +136,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
       description: product.description ?? '',
       rating: product.rating ?? 0,
       price: Number(product.price ?? 0),
-      quantity: Number(product.quantity ?? 0),
+      stockQuantity: getProductStock(product),
       category: product.category ?? 'drink'
     })
     setIsModalOpen(true)
@@ -179,7 +195,7 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
           description: form.description,
           rating: Number(form.rating),
           price: Number(form.price),
-          quantity: Number(form.quantity),
+          stockQuantity: Number(form.stockQuantity),
           category: form.category
         })
       })
@@ -299,20 +315,30 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
                 <div className="product-price">{formatCurrency(product.price)}</div>
 
                 {role === 'USER' && (
-                  <button 
-                    className="add-to-cart"
-                    onClick={() => handleAddToCart(product)}
-                  >
-                    Thêm vào giỏ hàng
-                  </button>
+                  <div className="product-actions">
+                    <button
+                      className="add-to-cart"
+                      onClick={() => handleAddToCart(product)}
+                      disabled={getProductStock(product) <= 0}
+                      title={getProductStock(product) <= 0 ? 'Sản phẩm đã hết hàng' : 'Thêm vào giỏ hàng'}
+                    >
+                      Thêm vào giỏ hàng
+                    </button>
+                    <button className="detail-btn" onClick={() => openDetail(product)}>
+                      Chi tiết sản phẩm
+                    </button>
+                  </div>
                 )}
 
                 {role === 'ADMIN' && (
                   <div className="admin-card-actions">
-                    <button className="admin-secondary-btn" onClick={() => openEdit(product)}>
+                    <button className="product-admin-btn product-admin-btn--detail" onClick={() => openDetail(product)}>
+                      Chi tiết sp
+                    </button>
+                    <button className="product-admin-btn product-admin-btn--edit" onClick={() => openEdit(product)}>
                       Sửa
                     </button>
-                    <button className="admin-danger-btn" onClick={() => handleDelete(product.id)}>
+                    <button className="product-admin-btn product-admin-btn--delete" onClick={() => handleDelete(product.id)}>
                       Xóa
                     </button>
                   </div>
@@ -322,6 +348,19 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
           ))
         )}
       </div>
+
+      {detailProduct && (
+        <ProductDetailModal
+          product={detailProduct}
+          onClose={closeDetail}
+          onAddToCart={(p) => {
+            void addToCart({ ...p, stockQuantity: getProductStock(detailProduct) }).catch((error: unknown) => {
+              const message = error instanceof Error ? error.message : 'Không thể thêm vào giỏ hàng'
+              alert(message)
+            })
+          }}
+        />
+      )}
 
       {role === 'ADMIN' && isModalOpen && (
         <div className="modal-overlay" onClick={closeModal} role="presentation">
@@ -414,13 +453,13 @@ const Products: React.FC<ProductsProps> = ({ addToCart }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Số lượng *</label>
+                  <label>Tồn kho *</label>
                   <input
                     type="number"
                     min={0}
                     className="form-control"
-                    value={form.quantity}
-                    onChange={(e) => setForm((p) => ({ ...p, quantity: Number(e.target.value) }))}
+                    value={form.stockQuantity}
+                    onChange={(e) => setForm((p) => ({ ...p, stockQuantity: Number(e.target.value) }))}
                     required
                   />
                 </div>

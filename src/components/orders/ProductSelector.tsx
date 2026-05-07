@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import type { Product } from '../../types'
 import { formatCurrency } from '../../utils/format'
+import { getProductStock } from '../../utils/stock'
 
 export type PosLineItem = {
   product: Product
@@ -68,7 +69,7 @@ const ProductSelector: React.FC<Props> = ({
             <div className="pos-empty">Không tìm thấy sản phẩm phù hợp.</div>
           ) : (
             filtered.map((p) => {
-              const stock = p.quantity ?? 0
+              const stock = getProductStock(p)
               const picked = selectedById.get(p.id)
               const isOut = stock <= 0
               return (
@@ -110,7 +111,7 @@ const ProductSelector: React.FC<Props> = ({
         ) : (
           <div className="pos-lines">
             {selected.map((li) => {
-              const stock = li.product.quantity ?? 0
+              const stock = getProductStock(li.product)
               const max = Math.max(0, stock)
               return (
                 <div key={li.product.id} className="pos-line">

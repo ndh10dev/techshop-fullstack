@@ -4,18 +4,23 @@ export interface CartItem {
   price: number
   quantity: number
   image: string
+  stockQuantity: number
 }
 
 export interface Product {
   id: number
   name: string
   description: string
+  detailedDescription?: string | null
+  usageInstructions?: string | null
+  storageInstructions?: string | null
   price: number
   image: string
   category: string
   brand?: string
   rating: number
   quantity?: number
+  stockQuantity?: number
 }
 
 export interface BlogPost {
@@ -92,7 +97,7 @@ export interface Order {
   note?: string
   paymentMethod?: string
   totalPrice: number
-  status: string
+  status: OrderStatus | string
   createdAt: string
   items: OrderItem[]
   User?: {
@@ -100,3 +105,5 @@ export interface Order {
     email: string
   }
 }
+
+export type OrderStatus = 'pending' | 'shipping' | 'completed' | 'cancelled'

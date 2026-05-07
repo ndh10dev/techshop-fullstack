@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import type { Product } from '../../types'
 import { getToken } from '../../utils/auth'
+import { getProductStock } from '../../utils/stock'
 import ProductSelector, { PosLineItem } from './ProductSelector'
 import OrderSummary from './OrderSummary'
 
@@ -72,7 +73,7 @@ const CreateOrderModal: React.FC<Props> = ({ onClose, onCreated }) => {
   }, [customer.phone, selected.length, submitting])
 
   const handleAdd = (p: Product) => {
-    const stock = p.quantity ?? 0
+    const stock = getProductStock(p)
     if (stock <= 0) return
     setSelected((prev) => {
       const existing = prev.find((li) => li.product.id === p.id)
@@ -90,7 +91,7 @@ const CreateOrderModal: React.FC<Props> = ({ onClose, onCreated }) => {
     setSelected((prev) => {
       const line = prev.find((li) => li.product.id === productId)
       if (!line) return prev
-      const stock = line.product.quantity ?? 0
+      const stock = getProductStock(line.product)
       const safe = Math.max(1, Math.min(nextQty, Math.max(0, stock)))
       return prev.map((li) => (li.product.id === productId ? { ...li, quantity: safe } : li))
     })
@@ -111,7 +112,7 @@ const CreateOrderModal: React.FC<Props> = ({ onClose, onCreated }) => {
 
     // Client-side stock guard (backend vẫn validate + rollback)
     for (const li of selected) {
-      const stock = li.product.quantity ?? 0
+      const stock = getProductStock(li.product)
       if (stock <= 0 || li.quantity > stock) {
         setError(`Sản phẩm "${li.product.name}" không đủ tồn kho`)
         return

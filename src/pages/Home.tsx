@@ -4,9 +4,11 @@ import { categories } from '../constants'
 import { formatCurrency, renderStars, formatDateTime } from '../utils/format'
 import type { Product, BlogPost } from '../types'
 import { getRoleFromStorage } from '../utils/auth'
+import { ProductDetailModal } from '../components'
+import { getProductStock } from '../utils/stock'
 
 interface HomeProps {
-  addToCart: (product: { id: number; name: string; price: number; image: string }) => void
+  addToCart: (product: { id: number; name: string; price: number; image: string; stockQuantity: number }) => Promise<void>
 }
 
 const Home: React.FC<HomeProps> = ({ addToCart }) => {
@@ -15,6 +17,7 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
 
   const [items, setItems] = useState<Product[]>([])
   const [posts, setPosts] = useState<BlogPost[]>([])
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null)
 
   const [isLoading, setIsLoading] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(false)
@@ -111,7 +114,7 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
 
     order.forEach(cat => {
       const list = (map.get(cat) ?? [])
-        .filter(p => (p.quantity ?? 0) > 0)
+        .filter((p) => getProductStock(p) > 0)
         .sort((a, b) => b.rating - a.rating)
         .slice(0, 2)
 
@@ -126,14 +129,25 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
   }, [])
 
   const handleAddToCart = useCallback((product: Product) => {
-    addToCart({
+    void addToCart({
       id: product.id,
       name: product.name,
       price: product.price,
-      image: product.image
+      image: product.image,
+      stockQuantity: getProductStock(product)
+    }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Không thể thêm vào giỏ hàng'
+      alert(message)
     })
-    alert(`Đã thêm ${product.name} vào giỏ hàng!`)
   }, [addToCart])
+
+  const openDetail = useCallback((product: Product) => {
+    setDetailProduct(product)
+  }, [])
+
+  const closeDetail = useCallback(() => {
+    setDetailProduct(null)
+  }, [])
 
   return (
     <div>
@@ -237,12 +251,19 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
                   </div>
 
                   {role === 'USER' && (
-                    <button
-                      className="add-to-cart"
-                      onClick={() => handleAddToCart(product)}
-                    >
-                      Thêm vào giỏ hàng
-                    </button>
+                    <div className="product-actions">
+                      <button
+                        className="add-to-cart"
+                        onClick={() => handleAddToCart(product)}
+                        disabled={getProductStock(product) <= 0}
+                        title={getProductStock(product) <= 0 ? 'Sản phẩm đã hết hàng' : 'Thêm vào giỏ hàng'}
+                      >
+                        Thêm vào giỏ hàng
+                      </button>
+                      <button className="detail-btn" onClick={() => openDetail(product)}>
+                        Chi tiết sản phẩm
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -250,6 +271,19 @@ const Home: React.FC<HomeProps> = ({ addToCart }) => {
           )}
         </div>
       </section>
+
+      {detailProduct && (
+        <ProductDetailModal
+          product={detailProduct}
+          onClose={closeDetail}
+          onAddToCart={(p) => {
+            void addToCart({ ...p, stockQuantity: getProductStock(detailProduct) }).catch((error: unknown) => {
+              const message = error instanceof Error ? error.message : 'Không thể thêm vào giỏ hàng'
+              alert(message)
+            })
+          }}
+        />
+      )}
 
       <section className="products-section">
         <div className="section-header">

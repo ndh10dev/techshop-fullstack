@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "db:sync": "node src/scripts/syncDb.js",
     "db:orders:alter": "node src/scripts/ensureOrderColumns.js",
+    "db:products:alter": "node src/scripts/ensureProductColumns.js",
     "seed": "node src/scripts/seed.js"
   },
   "keywords": [],

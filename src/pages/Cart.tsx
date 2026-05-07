@@ -6,7 +6,7 @@ import { formatCurrency } from '../utils/format'
 interface CartProps {
   cartItems: CartItem[]
   onRemoveFromCart: (id: number) => void
-  onUpdateQuantity: (id: number, quantity: number) => void
+  onUpdateQuantity: (id: number, quantity: number) => void | Promise<void>
   onCheckout: (formData: CheckoutFormData) => Promise<void>
 }
 
@@ -23,6 +23,7 @@ const Cart: React.FC<CartProps> = ({
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  const [quantityWarnings, setQuantityWarnings] = useState<Record<number, string>>({})
 
   const totalPrice = useMemo(
     () => cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
@@ -67,6 +68,34 @@ const Cart: React.FC<CartProps> = ({
     }
   }, [cartItems, formData, onCheckout])
 
+  const handleQuantityInput = useCallback((item: CartItem, rawValue: string) => {
+    const parsed = Number(rawValue)
+    if (!Number.isFinite(parsed)) return
+    const stock = Math.max(0, item.stockQuantity)
+    if (stock <= 0) return
+    const nextValue = Math.min(Math.max(Math.trunc(parsed), 1), stock)
+    if (nextValue !== Math.trunc(parsed)) {
+      setQuantityWarnings((prev) => ({ ...prev, [item.id]: 'Số lượng vượt quá tồn kho' }))
+    } else {
+      setQuantityWarnings((prev) => {
+        const next = { ...prev }
+        delete next[item.id]
+        return next
+      })
+    }
+    void Promise.resolve(onUpdateQuantity(item.id, nextValue)).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Không thể cập nhật số lượng'
+      setQuantityWarnings((prev) => ({ ...prev, [item.id]: message }))
+    })
+  }, [onUpdateQuantity])
+
+  const handleStepQuantity = useCallback((item: CartItem, nextValue: number) => {
+    void Promise.resolve(onUpdateQuantity(item.id, nextValue)).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Không thể cập nhật số lượng'
+      setQuantityWarnings((prev) => ({ ...prev, [item.id]: message }))
+    })
+  }, [onUpdateQuantity])
+
   if (cartItems.length === 0) {
     return (
       <div className="cart-page">
@@ -102,14 +131,24 @@ const Cart: React.FC<CartProps> = ({
                   <div className="cart-item-quantity-controls">
                     <button 
                       className="quantity-btn"
-                      onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                      onClick={() => handleStepQuantity(item, item.quantity - 1)}
+                      disabled={item.stockQuantity <= 0 || item.quantity <= 1}
                     >
                       -
                     </button>
-                    <span className="quantity-display">{item.quantity}</span>
+                    <input
+                      type="number"
+                      className="cart-quantity-input"
+                      value={item.quantity}
+                      min={1}
+                      max={Math.max(1, item.stockQuantity)}
+                      onChange={(e) => handleQuantityInput(item, e.target.value)}
+                      disabled={item.stockQuantity <= 0}
+                    />
                     <button 
                       className="quantity-btn"
-                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                      onClick={() => handleStepQuantity(item, item.quantity + 1)}
+                      disabled={item.stockQuantity <= 0 || item.quantity >= item.stockQuantity}
                     >
                       +
                     </button>
@@ -123,6 +162,9 @@ const Cart: React.FC<CartProps> = ({
                   <p className="cart-item-subtotal">
                     Tổng: {formatCurrency(item.price * item.quantity)}
                   </p>
+                  {quantityWarnings[item.id] && (
+                    <p className="cart-stock-warning">{quantityWarnings[item.id]}</p>
+                  )}
                 </div>
               </div>
             ))}

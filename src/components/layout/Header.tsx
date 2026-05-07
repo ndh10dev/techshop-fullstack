@@ -66,12 +66,26 @@ const Header: React.FC<HeaderProps> = ({ cartItems }) => {
               Đánh giá
             </Link>
           </li>
-          {role === 'ADMIN' && (
+          {role === 'USER' && (
             <li>
-              <Link to="/admin/orders" className={isActive('/admin') ? 'active' : ''}>
-                Quản lý
+              <Link to="/orders" className={isActive('/orders') ? 'active' : ''}>
+                Đơn hàng
               </Link>
             </li>
+          )}
+          {role === 'ADMIN' && (
+            <>
+              <li>
+                <Link to="/admin/dashboard" className={isActive('/admin/dashboard') ? 'active' : ''}>
+                  Thống kê
+                </Link>
+              </li>
+              <li>
+                <Link to="/admin/orders" className={isActive('/admin/orders') ? 'active' : ''}>
+                  Quản lý đơn hàng
+                </Link>
+              </li>
+            </>
           )}
           <li>
             <Link to="/account" className={isActive('/account') ? 'active' : ''}>

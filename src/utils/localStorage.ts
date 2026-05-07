@@ -14,6 +14,13 @@ export const getCartFromStorage = (): CartItem[] => {
     // Xác thực xem đó có phải là một mảng hay không.
     if (Array.isArray(parsed)) {
       return parsed
+        .filter((item) => item && typeof item.id === 'number')
+        .map((item) => ({
+          ...item,
+          stockQuantity: Number.isFinite(item.stockQuantity)
+            ? Math.max(0, Number(item.stockQuantity))
+            : Math.max(1, Number(item.quantity ?? 1))
+        }))
     }
     return []
   } catch {

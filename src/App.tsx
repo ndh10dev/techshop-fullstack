@@ -12,6 +12,8 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Account from './pages/Account'
 import AdminOrders from './pages/AdminOrders'
+import OrderHistory from './pages/OrderHistory'
+import AdminDashboard from './pages/AdminDashboard'
 import ChatWidget from './pages/ChatWidget'
 import type { CartItem, CheckoutFormData } from './types'
 import { getCartFromStorage, saveCartToStorage } from './utils/localStorage'
@@ -22,6 +24,7 @@ interface ProductInput {
   name: string
   price: number
   image: string
+  stockQuantity: number
 }
 
 const App: React.FC = () => {
@@ -31,37 +34,76 @@ const App: React.FC = () => {
     saveCartToStorage(cartItems)
   }, [cartItems])
 
-  const addToCart = useCallback((product: ProductInput) => {
+  const validateCartQuantity = useCallback(async (productId: number, quantity: number) => {
+    const token = getToken()
+    if (!token) throw new Error('Vui lòng đăng nhập để mua hàng.')
+    const res = await fetch('http://localhost:5000/api/orders/cart/validate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ productId, quantity })
+    })
+    if (!res.ok) {
+      let message = `Request failed (${res.status})`
+      try {
+        const data = (await res.json()) as { message?: string }
+        if (data?.message) message = data.message
+      } catch {
+        // ignore
+      }
+      throw new Error(message)
+    }
+  }, [])
+
+  const addToCart = useCallback(async (product: ProductInput) => {
+    const maxStock = Math.max(0, product.stockQuantity)
+    if (maxStock <= 0) {
+      alert('Sản phẩm đã hết hàng.')
+      return
+    }
+    const currentQty = cartItems.find((item) => item.id === product.id)?.quantity ?? 0
+    const nextQty = Math.min(currentQty + 1, maxStock)
+    if (nextQty <= currentQty) {
+      alert('Số lượng vượt quá tồn kho')
+      return
+    }
+    await validateCartQuantity(product.id, nextQty)
     setCartItems(prevItems => {
       const existingItem = prevItems.find(item => item.id === product.id)
       
       if (existingItem) {
         return prevItems.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: Math.min(item.quantity + 1, maxStock), stockQuantity: maxStock }
             : item
         )
       }
-      return [...prevItems, { ...product, quantity: 1 }]
+      return [...prevItems, { ...product, quantity: 1, stockQuantity: maxStock }]
     })
-  }, [])
+  }, [cartItems, validateCartQuantity])
 
   const removeFromCart = useCallback((id: number) => {
     setCartItems(prevItems => prevItems.filter(item => item.id !== id))
   }, [])
 
-  const updateQuantity = useCallback((id: number, quantity: number) => {
+  const updateQuantity = useCallback(async (id: number, quantity: number) => {
+    const item = cartItems.find((entry) => entry.id === id)
+    if (!item) return
     if (quantity < 1) {
       removeFromCart(id)
       return
     }
+    const nextQuantity = Math.min(quantity, Math.max(1, item.stockQuantity))
+    await validateCartQuantity(id, nextQuantity)
     
     setCartItems(prevItems =>
       prevItems.map(item =>
-        item.id === id ? { ...item, quantity } : item
+        item.id === id ? { ...item, quantity: nextQuantity } : item
       )
     )
-  }, [removeFromCart])
+  }, [cartItems, removeFromCart, validateCartQuantity])
 
   const handleCheckout = useCallback(async (formData: CheckoutFormData) => {
     if (cartItems.length === 0) {
@@ -134,6 +176,8 @@ const App: React.FC = () => {
           />
           <Route path="/reviews" element={<Reviews />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/orders" element={<OrderHistory />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/orders" element={<AdminOrders />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

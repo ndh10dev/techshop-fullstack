@@ -2,11 +2,25 @@ import { Op } from "sequelize";
 import { Product } from "../models/Product.js";
 import { HttpError } from "../utils/httpError.js";
 
+function normalizeStockPayload(payload) {
+  const next = { ...payload };
+  if (next.stockQuantity !== undefined) {
+    const normalized = Number(next.stockQuantity);
+    next.stockQuantity = normalized;
+    next.quantity = normalized;
+  } else if (next.quantity !== undefined) {
+    const normalized = Number(next.quantity);
+    next.quantity = normalized;
+    next.stockQuantity = normalized;
+  }
+  return next;
+}
+
 export async function listProducts(req, res, next) {
   try {
     const where = {};
     if (!req.user || req.user.role !== "ADMIN") {
-      where.quantity = { [Op.gt]: 0 };
+      where.stockQuantity = { [Op.gt]: 0 };
     }
     const products = await Product.findAll({ where, order: [["id", "DESC"]] });
     res.json(products);
@@ -20,7 +34,7 @@ export async function getProduct(req, res, next) {
     const product = await Product.findByPk(req.params.id);
     if (!product) throw new HttpError(404, "Product not found");
 
-    if ((!req.user || req.user.role !== "ADMIN") && product.quantity <= 0) {
+    if ((!req.user || req.user.role !== "ADMIN") && product.stockQuantity <= 0) {
       throw new HttpError(404, "Product not found");
     }
 
@@ -32,7 +46,7 @@ export async function getProduct(req, res, next) {
 
 export async function createProduct(req, res, next) {
   try {
-    const product = await Product.create(req.body);
+    const product = await Product.create(normalizeStockPayload(req.body));
     res.status(201).json(product);
   } catch (err) {
     next(err);
@@ -44,7 +58,7 @@ export async function updateProduct(req, res, next) {
     const product = await Product.findByPk(req.params.id);
     if (!product) throw new HttpError(404, "Product not found");
 
-    await product.update(req.body);
+    await product.update(normalizeStockPayload(req.body));
     res.json(product);
   } catch (err) {
     next(err);

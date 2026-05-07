@@ -19,11 +19,15 @@ CREATE TABLE IF NOT EXISTS products (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
+  detailed_description TEXT NULL,
+  usage_instructions TEXT NULL,
+  storage_instructions TEXT NULL,
   price DECIMAL(10,2) NOT NULL,
   image VARCHAR(2048) NOT NULL,
   brand VARCHAR(255) NULL,
   rating INT UNSIGNED NOT NULL DEFAULT 0,
   quantity INT NOT NULL DEFAULT 0,
+  stock_quantity INT NOT NULL DEFAULT 0,
   category VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;
 

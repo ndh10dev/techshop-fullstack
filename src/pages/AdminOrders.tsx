@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { Order } from '../types'
 import { getToken } from '../utils/auth'
 import { formatCurrency, formatDateTime } from '../utils/format'
 import { CreateOrderModal, OrderDetailModal } from '../components'
+import { getOrderStatusLabel, getOrderStatusTone, parseOrderStatus } from '../utils/orderStatus'
+import { cancelAdminOrder, confirmAdminOrder, deleteAdminOrder, fetchAdminOrders } from '../services/adminOrdersApi'
 
 interface Notification {
   id: string
@@ -47,18 +50,7 @@ const AdminOrders: React.FC = () => {
         if (!isSilent) setLoading(false)
         return
       }
-
-      const res = await fetch('http://localhost:5000/api/orders/admin', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-
-      if (!res.ok) {
-        throw new Error('Không thể tải danh sách đơn hàng')
-      }
-
-      const data = await res.json() as Order[]
+      const data = await fetchAdminOrders()
       
       if (!initialLoadRef.current) {
         const newOrders = data.filter(order => !viewedOrdersRef.current.has(order.id))
@@ -109,17 +101,7 @@ const AdminOrders: React.FC = () => {
 
     setDeletingId(orderId)
     try {
-      const token = getToken()
-      const res = await fetch(`http://localhost:5000/api/orders/${orderId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-
-      if (!res.ok) {
-        throw new Error('Xóa đơn hàng thất bại')
-      }
+      await deleteAdminOrder(orderId)
 
       // Remove from UI instantly
       setOrders(prev => prev.filter(o => o.id !== orderId))
@@ -131,6 +113,27 @@ const AdminOrders: React.FC = () => {
       setDeletingId(null)
     }
   }
+
+  const handleConfirm = useCallback(async (orderId: number) => {
+    try {
+      await confirmAdminOrder(orderId)
+      await fetchOrders()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Xác nhận đơn hàng thất bại')
+    }
+  }, [fetchOrders])
+
+  const handleCancel = useCallback(async (orderId: number) => {
+    const ok = window.confirm('Bạn có chắc muốn hủy đơn hàng này không?')
+    if (!ok) return
+
+    try {
+      await cancelAdminOrder(orderId)
+      await fetchOrders()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Hủy đơn hàng thất bại')
+    }
+  }, [fetchOrders])
 
   const removeNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id))
@@ -250,10 +253,13 @@ const AdminOrders: React.FC = () => {
       <div className="admin-container">
         <div className="admin-orders-header">
           <h1 className="admin-title">Quản lý Đơn hàng</h1>
-          <button className="pos-add-order-btn" onClick={() => setShowCreateModal(true)}>
-            <span className="pos-add-order-icon">＋</span>
-            <span>Thêm đơn hàng</span>
-          </button>
+          <div className="admin-dashboard-actions">
+            <Link className="admin-secondary-btn" to="/admin/dashboard">Dashboard</Link>
+            <button className="pos-add-order-btn" onClick={() => setShowCreateModal(true)}>
+              <span className="pos-add-order-icon">＋</span>
+              <span>Thêm đơn hàng</span>
+            </button>
+          </div>
         </div>
         
         <div className="notifications-container">
@@ -302,11 +308,18 @@ const AdminOrders: React.FC = () => {
                     <th>Khách hàng</th>
                     <th>Tổng tiền</th>
                     <th>Ngày đặt</th>
+                    <th>Trạng thái</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((order) => (
+                    (() => {
+                      const status = parseOrderStatus(order.status)
+                      const tone = getOrderStatusTone(status)
+                      const canConfirm = status === 'pending'
+                      const canCancel = status !== 'completed' && status !== 'cancelled'
+                      return (
                     <tr key={order.id}>
                       <td>#{order.id}</td>
                       <td>
@@ -320,7 +333,28 @@ const AdminOrders: React.FC = () => {
                       <td className="total-cell">{formatCurrency(order.totalPrice)}</td>
                       <td>{formatDateTime(order.createdAt)}</td>
                       <td>
+                        <span className={`status-badge status-badge--${tone}`}>
+                          {getOrderStatusLabel(status)}
+                        </span>
+                      </td>
+                      <td>
                         <div className="action-buttons">
+                          <button
+                            onClick={() => handleConfirm(order.id)}
+                            className="admin-primary-btn"
+                            disabled={!canConfirm}
+                            title={!canConfirm ? 'Chỉ có thể xác nhận đơn đang chờ' : 'Xác nhận đơn'}
+                          >
+                            Xác nhận
+                          </button>
+                          <button
+                            onClick={() => handleCancel(order.id)}
+                            className="admin-danger-btn"
+                            disabled={!canCancel}
+                            title={!canCancel ? 'Không thể hủy đơn đã hoàn thành/đã hủy' : 'Hủy đơn'}
+                          >
+                            Hủy đơn
+                          </button>
                           <button 
                             onClick={() => handleOpenOrderDetail(order)}
                             className="export-btn"
@@ -337,6 +371,8 @@ const AdminOrders: React.FC = () => {
                         </div>
                       </td>
                     </tr>
+                      )
+                    })()
                   ))}
                 </tbody>
               </table>

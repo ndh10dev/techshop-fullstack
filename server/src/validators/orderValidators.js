@@ -23,3 +23,8 @@ export const createPosOrderValidator = [
     .withMessage("Invalid payment method"),
 ];
 
+export const validateCartItemValidator = [
+  body("productId").isInt({ min: 1 }),
+  body("quantity").isInt({ min: 1 }),
+];
+

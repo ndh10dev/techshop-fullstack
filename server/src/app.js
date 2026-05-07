@@ -7,6 +7,7 @@ import orderRoutes from "./routes/orderRoutes.js";
 import postRoutes from "./routes/postRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import adminDashboardRoutes from "./routes/adminDashboardRoutes.js";
 
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
@@ -25,6 +26,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/contacts", contactRoutes);
+app.use("/api/admin", adminDashboardRoutes);
 
 // luôn ở cuối
 app.use(notFoundHandler);
